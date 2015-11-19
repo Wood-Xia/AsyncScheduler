@@ -5,16 +5,15 @@
 #ifndef CODELAB_SCHEDULER_H
 #define CODELAB_SCHEDULER_H
 
+#include "IScheduler.h"
 #include <functional>
 #include <memory>
 #include <cstddef>
 #include <thread>
 
-class Scheduler
+class Scheduler : public IScheduler
 {
 public:
-    typedef std::function<void()> Task;
-
     Scheduler();
     virtual ~Scheduler();
     Scheduler(const Scheduler&) = delete;

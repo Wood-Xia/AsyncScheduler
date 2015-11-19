@@ -4,8 +4,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++1y")
 
 set(HEADER_FILES
         FunctorWrapper.hpp
+        IScheduler.h
         Scheduler.h
         BlockingQueue.h
+        AsyncFunction.h
         )
 
 set(SOURCE_FILES
