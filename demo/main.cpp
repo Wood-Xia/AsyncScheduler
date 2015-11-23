@@ -18,18 +18,22 @@ void produce(SchedulerPtr scheduler)
 {
     int value = 0;
 
+    // original callable object
     CallableT foo =  [](string name, int value)
     {
         cout << name << " = " << value << endl;
     };
 
+    // wrapper callable object by AsyncFunction
     AsyncFunction<CallableT, string, int> aFunction(scheduler, foo);
     bool noEndless = false;
     while (value++ < 1000000 || noEndless)
     {
+        // now callback is executed asynchronously
         aFunction(string("name"), value);
     }
 }
+
 int main()
 {
     try
