@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <atomic>
 #include <experimental/optional>
+#include <iostream>
 
 template <typename T>
 class BlockingQueue

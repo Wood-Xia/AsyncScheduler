@@ -14,3 +14,5 @@ This is utility to wrap function object to be executed asynchronously.
 
 - Support schedule sequenced task or schedule task after specified task
 - Support more explicit schedule policy
+- Add more UT for Scheduler
+- Add usage example

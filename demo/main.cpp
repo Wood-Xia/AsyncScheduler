@@ -1,38 +1,64 @@
 #include <iostream>
 #include <string>
+#include <utility>
 #include <functional>
-#include "FunctorWrapper.hpp"
+#include <memory>
+#include <chrono>
+#include <thread>
+#include <vector>
+#include "AsyncFunction.h"
+#include "IScheduler.h"
+#include "Scheduler.h"
 
 using namespace std;
 
-void greeting()
+typedef std::function<void(string, int)> CallableT;
+
+void produce(SchedulerPtr scheduler)
 {
-    cout << "Hello, World!" << endl;
-}
+    int value = 0;
 
-typedef std::function<void(string, int)> CallBack;
+    CallableT foo =  [](string name, int value)
+    {
+        cout << name << " = " << value << endl;
+    };
 
-void handle(CallBack callBack)
-{
-    callBack("callback", 1024);
-}
-
-void consume()
-{
-
-}
-
-void produce()
-{
-
+    AsyncFunction<CallableT, string, int> aFunction(scheduler, foo);
+    bool noEndless = false;
+    while (value++ < 1000000 || noEndless)
+    {
+        aFunction(string("name"), value);
+    }
 }
 int main()
 {
-    std::function<void(string, int)> foo =  [](string name, int value){cout << name << " = "
-                                                                      << value << endl;};
-    auto f1 = FunctorWrapper<string, int>(foo);
-    handle(f1);
-    auto f2 = MakeFunctorWrapper(greeting);
-    f2();
+    try
+    {
+        auto p = std::make_shared<Scheduler>();
+        p->start();
+
+        std::vector<std::thread> producers;
+        for (size_t i = 0; i < 10; i++)
+        {
+            producers.push_back(std::thread(produce, p));
+        }
+
+        while(p->notCompletedTask() > 0)
+        {
+            std::this_thread::yield();
+        }
+        for (auto& it: producers)
+        {
+            it.join();
+        }
+        assert(p->notCompletedTask() == 0);
+        p->stop();
+    }
+    catch (...)
+    {
+        std::cout << "exception catched" << std::endl;
+    }
+
+
     return 0;
 }

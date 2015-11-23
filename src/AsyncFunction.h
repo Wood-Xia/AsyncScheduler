@@ -8,18 +8,27 @@
 #include <functional>
 #include <memory>
 #include "IScheduler.h"
+#include <iostream>
+#include <cassert>
 
-template<typename... ARGS>
+template<typename CallableT, typename... ARGS>
 class AsyncFunction
 {
 public:
-    AsyncFunction(std::shared_ptr<IScheduler> scheduler, std::function<void(ARGS...)> f )
-            : function_(f) {}
+    explicit AsyncFunction(std::shared_ptr<IScheduler> scheduler, CallableT f)
+            : function_(f), scheduler_(scheduler){ }
 
-    void operator()(ARGS... args)  { scheduler_->schedule([]() {function_(args...);});  }
+    void operator()(ARGS ... args)
+    {
+        auto lm = [this, args...]() {function_(args...);};
+        if(!scheduler_->schedule(lm))
+        {
+            std::cerr << " operator failed" << std::endl;
+        }
+    }
 
 private:
-    std::function<void(ARGS...)> function_;
+    CallableT function_;
     std::shared_ptr<IScheduler> scheduler_;
 };
 

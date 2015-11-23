@@ -9,7 +9,7 @@
 
 struct Scheduler::Impl
 {
-    Impl() : isRunning_(false), isAborting_(false), taskCount_(0)
+    Impl() : isRunning_(false), isAborting_(false), taskCount_(0), runningThreads_(0)
     {
 
     }
@@ -21,7 +21,7 @@ struct Scheduler::Impl
 
     void start(const size_t workers)
     {
-        if(!isRunning_)
+        if(!isRunning_.load())
         {
             std::cout << "starting " << workers << " workers" << std::endl;
             threads_.reserve(workers);
@@ -33,16 +33,18 @@ struct Scheduler::Impl
                 ThreadPtr thd(new std::thread(std::bind(&Impl::workerHandler, this, i)));
                 threads_.push_back(std::move(thd));
             }
-            isRunning_ = true;
+            isRunning_.store(true);
         }
-
     }
 
     void stop() noexcept
     {
-        if(isRunning_)
+        if(isRunning_.load())
         {
-            abortPossibleWaitings();
+            while(runningThreads_.load() > 0)
+            {
+                abortPossibleWaitings();
+            }
             waitWorkThreadsFinished();
             {
                 std::lock_guard<std::mutex> lock(taskQueuesMutex_);
@@ -54,17 +56,19 @@ struct Scheduler::Impl
         }
     }
 
-    bool schedule(const Scheduler::Task& task)
+    bool schedule(Scheduler::Task task)
     {
+        std::cout << "Impl scheduling task" << std::endl;
         // Policy? Chance balance or load balance?
-        if (isRunning_ && !isAborting_)
+        if (isRunning_.load() && !isAborting_.load())
         {
             std::lock_guard<std::mutex> lock(taskQueuesMutex_);
-            auto n = taskCount_++;
-            auto which = n % threads_.size();
+            auto which = taskCount_.load() % threads_.size();
             if (which <= taskQueues_.size() -1)
             {
                 taskQueues_[which]->put(task);
+                taskCount_.fetch_add(1);
+                std::cout << "Impl scheduled task on worker#" << which << std::endl;
                 return true;
             }
         }
@@ -74,6 +78,11 @@ struct Scheduler::Impl
     size_t workers() const
     {
         return threads_.size();
+    }
+
+    size_t notCompletedTask() const
+    {
+        return taskCount_.load();
     }
 
 private:
@@ -90,12 +99,12 @@ private:
                 // ensure no excepption in deconstructor
             }
         }
-        isAborting_ = false;
+        isAborting_.store(false);
     }
 
     void abortPossibleWaitings()
     {
-        isAborting_ = true;
+        isAborting_.store(true);
         for (auto& que : taskQueues_)
         {
             que->abort();
@@ -104,22 +113,27 @@ private:
 
     void workerHandler(const size_t which)
     {
-        while (isRunning_ && !isAborting_)
+        runningThreads_.fetch_add(1);
+        while (!isAborting_.load())
         {
+            std::cout << "worker thread#" << which << " waiting for task" << std::endl;
             auto task = taskQueues_[which]->take();
             if (task)
             {
                 (*task)();
-                --taskCount_;
+                std::cout << "executed on task at worker#" << which << std::endl;
+                taskCount_.fetch_sub(1);
             }
         }
-
+        runningThreads_.fetch_sub(1);
+        std::cout << "worker thread#" << which << " aborted" << std::endl;
     }
 
 private:
     std::atomic<bool> isRunning_;
     std::atomic<bool> isAborting_;
     std::atomic<size_t > taskCount_;
+    std::atomic<size_t> runningThreads_;
     typedef std::unique_ptr<std::thread> ThreadPtr;
     std::vector<ThreadPtr> threads_;
     typedef BlockingQueue<Task> TaskQue;
@@ -148,12 +162,18 @@ void Scheduler::stop()
     pImpl_->stop();
 }
 
-bool Scheduler::schedule(const Task& task)
+bool Scheduler::schedule(Task task)
 {
+    std::cout << "scheduling task" << std::endl;
     return pImpl_->schedule(task);
 }
 
 size_t Scheduler::workers() const
 {
     return pImpl_->workers();
+}
+
+size_t Scheduler::notCompletedTask() const
+{
+    return pImpl_->notCompletedTask();
 }

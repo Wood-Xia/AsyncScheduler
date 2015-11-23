@@ -18,11 +18,12 @@ public:
     virtual ~Scheduler();
     Scheduler(const Scheduler&) = delete;
     const Scheduler& operator=(const Scheduler&) = delete;
-
+    // @TODO support lazy create worker thread is necessory?
     void start(const size_t workers = std::thread::hardware_concurrency());
     void stop();
-    bool schedule(const Task& task);
+    bool schedule(Task task);
     size_t workers() const;
+    size_t notCompletedTask() const;
 
 private:
     struct Impl;
