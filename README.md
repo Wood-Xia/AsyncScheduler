@@ -2,7 +2,7 @@
 
 This is utility to wrap function object to be executed asynchronously.
 
-###Principle
+### Principle
 
 - Match TDDCPRI project specified requirement firstly
 - Keep single target, not try to provide 
@@ -16,3 +16,4 @@ This is utility to wrap function object to be executed asynchronously.
 - Support more explicit schedule policy
 - Add more UT for Scheduler
 - Add usage example
+- Support move semantic for some API if necessory
