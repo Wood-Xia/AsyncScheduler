@@ -4,8 +4,8 @@ This is utility to wrap function object to be executed asynchronously.
 
 ### Principle
 
-- Match TDDCPRI project specified requirement firstly
-- Keep single target, not try to provide 
+- Match project specified requirement firstly
+- Keep single target, not try to provide full functionality
 - Easy use
 - Require smallest change on client side
 - Easy to read
